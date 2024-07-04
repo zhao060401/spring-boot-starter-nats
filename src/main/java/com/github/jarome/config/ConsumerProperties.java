@@ -3,46 +3,23 @@ package com.github.jarome.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 
 @Component
-@ConfigurationProperties(prefix = "nats.consumer.default")
+@ConfigurationProperties(prefix = "nats")
 public class ConsumerProperties {
-    /**
-     * Minimum consumer thread number
-     */
-    private int consumeThreadMin = 20;
 
     /**
-     * Max consumer thread number
+     * key:subject
      */
-    private int consumeThreadMax = 20;
+    private List<PullConsumer> consumers;
 
-    /**
-     * the capacity of the LinkedBlockingQueue in ThreadPoolExecutor,that use to consumer thread
-     */
-    private int blockQueueMax = Integer.MAX_VALUE - 1024;
-    
-    public int getConsumeThreadMin() {
-        return consumeThreadMin;
+    public List<PullConsumer> getConsumers() {
+        return consumers;
     }
 
-    public void setConsumeThreadMin(int consumeThreadMin) {
-        this.consumeThreadMin = consumeThreadMin;
-    }
-
-    public int getConsumeThreadMax() {
-        return consumeThreadMax;
-    }
-
-    public void setConsumeThreadMax(int consumeThreadMax) {
-        this.consumeThreadMax = consumeThreadMax;
-    }
-
-    public int getBlockQueueMax() {
-        return blockQueueMax;
-    }
-
-    public void setBlockQueueMax(int blockQueueMax) {
-        this.blockQueueMax = blockQueueMax;
+    public void setConsumers(List<PullConsumer> consumers) {
+        this.consumers = consumers;
     }
 }

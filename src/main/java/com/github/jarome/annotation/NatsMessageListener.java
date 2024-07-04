@@ -10,13 +10,63 @@ import java.lang.annotation.Target;
 public @interface NatsMessageListener {
     String durable() default "";
 
-    String deliverSubject();
+    /**
+     * push 模式加
+     */
+    String deliverSubject() default "";
+
+    /**
+     * 消费组 push用
+     */
+    String deliverGroup() default "";
 
     String filterSubject();
 
     String stream();
 
-    String deliverGroup();
+    /**
+     * 最大重试次数
+     */
+    int maxDeliver() default -1;
 
+    /**
+     * 是否自动ack
+     */
     boolean autoAck() default true;
+
+    /**
+     * Max consumer thread number.
+     */
+    int consumeThreadMax() default 64;
+
+    /**
+     * consumer thread number.
+     */
+    int consumeThreadNumber() default 20;
+
+    /**
+     * Set ExecutorService params -- blockingQueueSize
+     */
+    int blockingQueueSize() default 2000;
+
+    /**
+     * Set ExecutorService params -- keepAliveTime
+     */
+    long keepAliveTime() default 1000 * 60;
+
+    /**
+     * 一次拉多少
+     */
+    int pullBatchSize() default 10;
+
+    /**
+     * 拉取下一个消息间隔
+     */
+    long pullInterval() default 1000;
+
+    /**
+     * 第一次拉取延迟 单位ms
+     */
+    long maxWaitTime() default 1;
+
 }

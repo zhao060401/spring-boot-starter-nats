@@ -160,8 +160,8 @@ public class NatsTemplate {
     private byte[] convertToBytes(Message<?> message) {
         byte[] payloads;
         try {
+            message = this.doConvert(message.getPayload(), message.getHeaders());
             Object payloadObj = message.getPayload();
-            message = this.doConvert(payloadObj, message.getHeaders());
             if (null == payloadObj) {
                 throw new NatsException("the message cannot be empty");
             }
@@ -184,9 +184,7 @@ public class NatsTemplate {
 
 
     private Message<?> doConvert(Object payload, MessageHeaders headers) {
-        Message<?> message = this.natsMessageConverter instanceof SmartMessageConverter ?
-                ((SmartMessageConverter) this.natsMessageConverter.getMessageConverter()).toMessage(payload, headers, null) :
-                this.natsMessageConverter.getMessageConverter().toMessage(payload, headers);
+        Message<?> message = this.natsMessageConverter instanceof SmartMessageConverter ? ((SmartMessageConverter) this.natsMessageConverter.getMessageConverter()).toMessage(payload, headers, null) : this.natsMessageConverter.getMessageConverter().toMessage(payload, headers);
         if (message == null) {
             String payloadType = payload.getClass().getName();
             Object contentType = headers != null ? headers.get(MessageHeaders.CONTENT_TYPE) : null;

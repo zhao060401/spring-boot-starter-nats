@@ -19,17 +19,18 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.MethodParameter;
 import org.springframework.messaging.converter.SmartMessageConverter;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -43,8 +44,6 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
     ConfigurableApplicationContext applicationContext;
     NatsMessageConverter natsMessageConverter;
     ConsumerProperties consumerProperties;
-    ThreadPoolExecutor consumeExecutor;
-    BlockingQueue<Runnable> consumeRequestQueue;
     private List<JetStreamSubscription> consumers;
 
     public NatsConsumerConfig(Connection connection, ConfigurableApplicationContext applicationContext, ConsumerProperties consumerProperties, NatsMessageConverter natsMessageConverter) {
@@ -52,8 +51,6 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
         this.applicationContext = applicationContext;
         this.consumerProperties = consumerProperties;
         this.natsMessageConverter = natsMessageConverter;
-        this.consumeRequestQueue = new LinkedBlockingQueue<>(consumerProperties.getBlockQueueMax());
-        this.consumeExecutor = new ThreadPoolExecutor(this.consumerProperties.getConsumeThreadMin(), this.consumerProperties.getConsumeThreadMax(), 1000 * 60, TimeUnit.MILLISECONDS, this.consumeRequestQueue, new ThreadFactoryImpl("NatsConsume_"));
     }
 
     @Override
@@ -71,22 +68,81 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
         MethodParameter methodParameter = getMethodParameter(clazz, parameterType);
         NatsListener<Object> natsListener = ((NatsListener<Object>) bean);
         NatsMessageListener annotation = clazz.getAnnotation(NatsMessageListener.class);
+        boolean autoAck = annotation.autoAck();
+        int threadMax = annotation.consumeThreadMax();
+        int threadNumber = annotation.consumeThreadNumber();
+        int queueSize = annotation.blockingQueueSize();
+        long pullInterval = annotation.pullInterval();
+        long maxWaitTime = annotation.maxWaitTime();
+        long keepAliveTime = annotation.keepAliveTime();
+        int pullBatchSize = annotation.pullBatchSize();
+        String stream = annotation.stream();
+        List<PullConsumer> consumers = consumerProperties.getConsumers();
+        if (consumers != null && !consumers.isEmpty()) {
+            for (PullConsumer pullConsumer : consumers) {
+                if (pullConsumer.getSubject().equals(annotation.filterSubject())) {
+                    autoAck = pullConsumer.getAutoAck() == null ? autoAck : pullConsumer.getAutoAck();
+                    threadMax = pullConsumer.getConsumeThreadMax() == null ? threadMax : pullConsumer.getConsumeThreadMax();
+                    threadNumber = pullConsumer.getConsumeThreadNumber() == null ? threadNumber : pullConsumer.getConsumeThreadNumber();
+                    queueSize = pullConsumer.getBlockingQueueSize() == null ? queueSize : pullConsumer.getBlockingQueueSize();
+                    pullInterval = pullConsumer.getPullInterval() == null ? pullInterval : Math.max(1, pullConsumer.getPullInterval());
+                    maxWaitTime = pullConsumer.getMaxWaitTime() == null ? maxWaitTime : Math.max(1, pullConsumer.getMaxWaitTime());
+                    keepAliveTime = pullConsumer.getKeepAliveTime() == null ? keepAliveTime : pullConsumer.getKeepAliveTime();
+                    pullBatchSize = pullConsumer.getPullBatchSize() == null ? pullBatchSize : Math.max(1, pullConsumer.getPullBatchSize());
+                }
+            }
+        }
         try {
-            createStream(connection.jetStreamManagement(), annotation.stream(), annotation.filterSubject());
+            createStream(connection.jetStreamManagement(), stream, annotation.filterSubject());
             JetStream js = connection.jetStream();
             String deliverGroup = annotation.deliverGroup();
-            ConsumerConfiguration cc = ConsumerConfiguration.builder().durable(annotation.durable()).deliverSubject(annotation.deliverSubject()).ackPolicy(AckPolicy.Explicit).filterSubject(annotation.filterSubject()).deliverGroup(deliverGroup).build();
-            Dispatcher dispatcher = connection.createDispatcher();
-            ConsumerInfo consumerInfo = connection.jetStreamManagement().addOrUpdateConsumer(annotation.stream(), cc);
-            PushSubscribeOptions so = PushSubscribeOptions.builder().stream(annotation.stream()).name(consumerInfo.getName()).deliverGroup(deliverGroup).bind(true).build();
-            return js.subscribe(annotation.filterSubject(), dispatcher, msg -> {
-                List<String> Sid = msg.getHeaders() == null ? null : msg.getHeaders().get("Nats-Msg-Id");
-                log.info("MsgId:{}", Sid);
-                invoke(natsListener, annotation, convertMessage(msg, parameterType, methodParameter), msg);
-            }, false, so);
+            String deliverSubject = annotation.deliverSubject();
+            boolean isPost = false;
+            ConsumerConfiguration.Builder builder = ConsumerConfiguration.builder().durable(annotation.durable()).deliverSubject(deliverSubject).ackPolicy(AckPolicy.Explicit).filterSubject(annotation.filterSubject()).maxDeliver(annotation.maxDeliver());
+            if (StringUtils.hasLength(deliverSubject) && StringUtils.hasLength(deliverGroup)) {
+                //post
+                builder.deliverSubject(deliverSubject);
+                builder.deliverGroup(deliverGroup);
+                isPost = true;
+            }
+            ConsumerConfiguration cc = builder.build();
+            ConsumerInfo consumerInfo = connection.jetStreamManagement().addOrUpdateConsumer(stream, cc);
+            ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadNumber, threadMax, keepAliveTime, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>(queueSize));
+            if (isPost) {
+                Dispatcher dispatcher = connection.createDispatcher();
+                PushSubscribeOptions so = PushSubscribeOptions.builder().stream(stream).name(consumerInfo.getName()).deliverGroup(deliverGroup).bind(true).build();
+                boolean finalAutoAck = autoAck;
+                return js.subscribe(annotation.filterSubject(), dispatcher, msg -> invoke(natsListener, finalAutoAck, convertMessage(msg, parameterType, methodParameter), msg, threadPool), false, so);
+            } else {
+                //pull
+                PullSubscribeOptions so = PullSubscribeOptions.builder().stream(stream).name(consumerInfo.getName()).bind(true).build();
+                JetStreamSubscription sub = js.subscribe(annotation.filterSubject(), so);
+                long finalMaxWaitTime = maxWaitTime;
+                long finalPullInterval = pullInterval;
+                boolean finalAutoAck1 = autoAck;
+                int finalPullBatchSize = pullBatchSize;
+                new Thread(() -> {
+                    try {
+                        while (true) {
+                            List<Message> msgList = sub.fetch(finalPullBatchSize, finalMaxWaitTime);
+                            if (msgList == null || msgList.isEmpty()) {
+                                sub.nextMessage(Duration.ofMillis(finalPullInterval));
+                                continue;
+                            }
+                            for (Message msg : msgList) {
+                                invoke(natsListener, finalAutoAck1, convertMessage(msg, parameterType, methodParameter), msg, threadPool);
+                            }
+                        }
+                    } catch (Exception e) {
+                        //Exceptions cannot be thrown or the thread will interrupt
+                        log.error("Pull Message Service Run Method exception", e);
+                    }
+                }).start();
+                return sub;
+            }
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            throw new NatsException("Initialize consumer " + beanName + " fail");
+            throw new NatsException("Initialize consumer " + beanName + " fail", e);
         }
     }
 
@@ -125,7 +181,7 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
 
     private MethodParameter getMethodParameter(Class<?> targetClass, Type messageType) {
         Class clazz;
-        if (messageType instanceof ParameterizedType && natsMessageConverter instanceof SmartMessageConverter) {
+        if (messageType instanceof ParameterizedType && natsMessageConverter.getMessageConverter() instanceof SmartMessageConverter) {
             clazz = (Class) ((ParameterizedType) messageType).getRawType();
         } else if (messageType instanceof Class) {
             clazz = (Class) messageType;
@@ -137,7 +193,7 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
             return new MethodParameter(method, 0);
         } catch (NoSuchMethodException e) {
             log.error(e.getMessage(), e);
-            throw new NatsException("parameterType:" + messageType + " of onMessage method is not supported");
+            throw new NatsException("parameterType:" + messageType + " of onMessage method is not supported", e);
         }
     }
 
@@ -160,11 +216,11 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
     }
 
 
-    private void invoke(NatsListener<Object> pulsarListener, NatsMessageListener annotation, Object obj, Message msg) {
-        consumeExecutor.execute(() -> {
+    private void invoke(NatsListener<Object> pulsarListener, boolean autoAck, Object obj, Message msg, ThreadPoolExecutor threadPoolExecutor) {
+        threadPoolExecutor.execute(() -> {
             try {
                 pulsarListener.onMessage(obj);
-                if (annotation.autoAck()) {
+                if (autoAck) {
                     msg.ack();
                 }
             } catch (Exception e) {
@@ -201,7 +257,7 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
 
     public static StreamInfo createStream(JetStreamManagement jsm, String streamName, StorageType storageType, String... subjects) {
         try {
-            StreamConfiguration sc = StreamConfiguration.builder().name(streamName).storageType(storageType).retentionPolicy(RetentionPolicy.WorkQueue).subjects(subjects).build();
+            StreamConfiguration sc = StreamConfiguration.builder().name(streamName).storageType(storageType).maxAge(Duration.ofDays(2)).retentionPolicy(RetentionPolicy.WorkQueue).subjects(subjects).build();
             StreamInfo si = jsm.addStream(sc);
             log.info("Created stream {} with subject(s) {}", streamName, si.getConfiguration().getSubjects());
             return si;

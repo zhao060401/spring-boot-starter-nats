@@ -1,5 +1,6 @@
 package com.github.jarome;
 
+
 import com.github.jarome.config.ConsumerProperties;
 import com.github.jarome.config.NatsMessageConverter;
 import com.github.jarome.config.NatsTemplate;
