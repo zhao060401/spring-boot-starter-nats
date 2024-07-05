@@ -70,5 +70,16 @@
             </plugin>
         </plugins>
     </build>
-
+<distributionManagement>
+   <repository>
+     <id>github</id>
+     <name>Releases</name>
+     <url>https://maven.pkg.github.com/zhao060401/maven-releases</url>
+   </repository>
+    <repository>
+     <id>github</id>
+     <name>Snapshot</name>
+     <url>https://maven.pkg.github.com/zhao060401/maven-snapshots</url>
+   </repository>
+</distributionManagement>
 </project>
