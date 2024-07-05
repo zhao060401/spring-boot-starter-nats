@@ -32,6 +32,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Publish package
-      run: mvn --batch-mode deploy
+      run: mvn --batch-mode deploy  -D skipTests
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
