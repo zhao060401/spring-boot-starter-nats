@@ -14,9 +14,9 @@
     <name>spring-boot-starter-nats</name>
     <description>spring-boot-starter-nats</description>
     <scm>
-        <connection>scm:git:https://gitlab.wangdian.cn/tm/spring-boot-starter-nats</connection>
-        <developerConnection>scm:git:git@gitlab.wangdian.cn:tm/spring-boot-starter-nats.git</developerConnection>
-        <url>https://gitlab.wangdian.cn/tm/spring-boot-starter-nats</url>
+        <connection>scm:git:https://github.com/zhao060401/spring-boot-starter-nats</connection>
+        <developerConnection>scm:git:git@github.com:zhao060401/spring-boot-starter-nats.git</developerConnection>
+        <url>https://github.com/zhao060401/spring-boot-starter-nats</url>
         <tag>HEAD</tag>
     </scm>
     <properties>
