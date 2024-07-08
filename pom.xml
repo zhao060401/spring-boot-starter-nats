@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.github.jarome</groupId>
     <artifactId>spring-boot-starter-nats</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.1</version>
     <name>spring-boot-starter-nats</name>
     <description>spring-boot-starter-nats</description>
     <scm>
