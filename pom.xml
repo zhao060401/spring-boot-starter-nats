@@ -74,12 +74,12 @@
    <repository>
      <id>github</id>
      <name>Releases</name>
-     <url>https://maven.pkg.github.com/zhao060401</url>
+     <url>https://maven.pkg.github.com/zhao060401/spring-boot-starter-nats</url>
    </repository>
     <snapshotRepository>
      <id>github</id>
      <name>Snapshot</name>
-     <url>https://maven.pkg.github.com/zhao060401</url>
+     <url>https://maven.pkg.github.com/zhao060401/spring-boot-starter-nats</url>
    </snapshotRepository>
 </distributionManagement>
 </project>
