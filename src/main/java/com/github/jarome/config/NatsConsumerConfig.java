@@ -76,6 +76,7 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
         long maxWaitTime = annotation.maxWaitTime();
         long keepAliveTime = annotation.keepAliveTime();
         int pullBatchSize = annotation.pullBatchSize();
+        long pullDelayTime = annotation.pullDelayTime();
         String stream = annotation.stream();
         List<PullConsumer> consumers = consumerProperties.getConsumers();
         if (consumers != null && !consumers.isEmpty()) {
@@ -85,10 +86,11 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
                     threadMax = pullConsumer.getConsumeThreadMax() == null ? threadMax : pullConsumer.getConsumeThreadMax();
                     threadNumber = pullConsumer.getConsumeThreadNumber() == null ? threadNumber : pullConsumer.getConsumeThreadNumber();
                     queueSize = pullConsumer.getBlockingQueueSize() == null ? queueSize : pullConsumer.getBlockingQueueSize();
-                    pullInterval = pullConsumer.getPullInterval() == null ? pullInterval : Math.max(1, pullConsumer.getPullInterval());
-                    maxWaitTime = pullConsumer.getMaxWaitTime() == null ? maxWaitTime : Math.max(1, pullConsumer.getMaxWaitTime());
+                    pullInterval = pullConsumer.getPullInterval() == null ? pullInterval : Math.max(1L, pullConsumer.getPullInterval());
+                    maxWaitTime = pullConsumer.getMaxWaitTime() == null ? maxWaitTime : Math.max(1L, pullConsumer.getMaxWaitTime());
                     keepAliveTime = pullConsumer.getKeepAliveTime() == null ? keepAliveTime : pullConsumer.getKeepAliveTime();
                     pullBatchSize = pullConsumer.getPullBatchSize() == null ? pullBatchSize : Math.max(1, pullConsumer.getPullBatchSize());
+                    pullDelayTime = pullConsumer.getPullDelayTime() == null ? pullDelayTime : Math.max(0L, pullConsumer.getPullDelayTime());
                 }
             }
         }
@@ -117,13 +119,18 @@ public class NatsConsumerConfig implements ApplicationContextAware, SmartInitial
                 //pull
                 PullSubscribeOptions so = PullSubscribeOptions.builder().stream(stream).name(consumerInfo.getName()).bind(true).build();
                 JetStreamSubscription sub = js.subscribe(annotation.filterSubject(), so);
+                connection.flush(Duration.ofSeconds(1));
                 long finalMaxWaitTime = maxWaitTime;
                 long finalPullInterval = pullInterval;
                 boolean finalAutoAck1 = autoAck;
                 int finalPullBatchSize = pullBatchSize;
+                long finalPullDelayTime = pullDelayTime;
                 new Thread(() -> {
                     try {
                         while (true) {
+                            if (finalPullDelayTime != 0L) {
+                                sub.nextMessage(finalPullDelayTime);
+                            }
                             List<Message> msgList = sub.fetch(finalPullBatchSize, finalMaxWaitTime);
                             if (msgList == null || msgList.isEmpty()) {
                                 sub.nextMessage(Duration.ofMillis(finalPullInterval));

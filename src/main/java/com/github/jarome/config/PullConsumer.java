@@ -5,42 +5,47 @@ public class PullConsumer {
     /*
      * 是否自动ack
      */
-    private Boolean autoAck = true;
+    private Boolean autoAck;
 
     /**
      * Max consumer thread number.
      */
-    private Integer consumeThreadMax = 64;
+    private Integer consumeThreadMax;
 
     /**
      * consumer thread number.
      */
-    private Integer consumeThreadNumber = 20;
+    private Integer consumeThreadNumber;
 
     /**
      * Set ExecutorService params -- blockingQueueSize
      */
-    private Integer blockingQueueSize = 2000;
+    private Integer blockingQueueSize;
 
     /**
      * 一次拉多少
      */
-    private Integer pullBatchSize = 10;
+    private Integer pullBatchSize;
 
     /**
      * 拉取间隔
      */
-    private Long pullInterval = 1000L;
+    private Long pullInterval;
 
     /**
      * 存活时间
      */
-    private Long keepAliveTime = 1000 * 60L;
+    private Long keepAliveTime;
 
     /**
      * 拉取延迟
      */
-    private Long maxWaitTime = 0L;
+    private Long maxWaitTime;
+
+    /**
+     * 拉取代码首次延迟
+     */
+    private Long pullDelayTime;
 
     public Boolean getAutoAck() {
         return autoAck;
@@ -112,5 +117,13 @@ public class PullConsumer {
 
     public void setKeepAliveTime(Long keepAliveTime) {
         this.keepAliveTime = keepAliveTime;
+    }
+
+    public Long getPullDelayTime() {
+        return pullDelayTime;
+    }
+
+    public void setPullDelayTime(Long pullDelayTime) {
+        this.pullDelayTime = pullDelayTime;
     }
 }

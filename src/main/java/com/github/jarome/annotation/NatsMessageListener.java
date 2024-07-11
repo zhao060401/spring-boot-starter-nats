@@ -65,8 +65,13 @@ public @interface NatsMessageListener {
     long pullInterval() default 1000;
 
     /**
-     * 第一次拉取延迟 单位ms
+     * 拉取最大超时时间 单位ms
      */
-    long maxWaitTime() default 1;
+    long maxWaitTime() default 3000;
+
+    /**
+     * 拉取延迟时间 单位ms
+     */
+    long pullDelayTime() default 0;
 
 }
