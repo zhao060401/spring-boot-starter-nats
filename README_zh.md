@@ -2,7 +2,11 @@
 为方便发送和接收Nats消息，封装此starter，用法类似RocketMQ starter。
 ## pom引用
 ```xml
-TODO
+<dependency>
+  <groupId>com.github.jarome</groupId>
+  <artifactId>spring-boot-starter-nats</artifactId>
+  <version>0.0.2</version>
+</dependency>
 ```
 ## 基础配置
 ```yaml
@@ -38,7 +42,8 @@ consumers参数
 | keepAliveTime | 消费者线程  存活时间 | 1000*60 ms             |
 | pullBatchSize | pull模式每次拉取数量 | 10                     |
 | pullInterval | pull模式无消息时的拉取间隔 | 1000ms                 |
-| maxWaitTime | pull模式首次拉取时间延迟 | 0ms （按照Nats限制实际最小为1ms） |
+| maxWaitTime | pull模式首次拉取时间延迟 | 3000ms （按照Nats限制实际最小为1ms） |
+| pullDelayTime | pull模式的拉取延迟时间 |0ms |
 
 ### 生产者
 ```java
