@@ -9,14 +9,14 @@
     </parent>
     <groupId>com.github.jarome</groupId>
     <artifactId>spring-boot-starter-nats</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.3</version>
     <name>spring-boot-starter-nats</name>
     <description>spring-boot-starter-nats</description>
     <scm>
         <connection>scm:git:https://github.com/zhao060401/spring-boot-starter-nats</connection>
         <developerConnection>scm:git:git@github.com:zhao060401/spring-boot-starter-nats.git</developerConnection>
         <url>https://github.com/zhao060401/spring-boot-starter-nats</url>
-        <tag>HEAD</tag>
+        <tag>0.0.3</tag>
     </scm>
     <properties>
         <java.version>11</java.version>
