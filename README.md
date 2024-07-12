@@ -2,7 +2,11 @@
 For the convenience of sending and receiving Nats messages, encapsulate this starter, similar in usage to RocketMQ starter.
 ## pom
 ```xml
-TODO
+<dependency>
+  <groupId>com.github.jarome</groupId>
+  <artifactId>spring-boot-starter-nats</artifactId>
+  <version>0.0.2</version>
+</dependency>
 ```
 ## Basic Configuration
 ```yaml
@@ -38,7 +42,8 @@ If no modifications are needed, the entire consumers can be left blank
 | keepAliveTime       | ThreadPoool keepAliveTime                           | 1000*60 ms             |
 | pullBatchSize       | pulls the fetch each time in pull mode              | 10                     |
 | pullInterval        | pull interval when there is no message in pull mode | 1000ms                 |
-| maxWaitTime         | first pull time delay in pull mode          | 0ms （According to the Nats limit, the actual minimum is 1ms） |
+| maxWaitTime         | pull timeout in pull mode          | 3000ms （According to the Nats limit, the actual minimum is 1ms） |
+| pullDelayTime         | pull time delay in pull mode           | 0ms （According to the Nats limit, the actual minimum is 1ms） |
 
 ### Producer
 ```java
