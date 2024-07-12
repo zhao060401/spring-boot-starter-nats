@@ -31,7 +31,6 @@ consumers参数
 | 字段 | 解释 | 默认值                    |
 | --- | --- |------------------------|
 | subject | 接收的主题 |
-|
 | autoAck | 自动ack | true                   |
 | consumeThreadNumber | 消费者线程 核心线程数 | 20                     |
 | consumeThreadMax | 消费者线程 最大线程数 | 64                     |
