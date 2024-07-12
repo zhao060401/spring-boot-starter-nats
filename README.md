@@ -43,7 +43,7 @@ If no modifications are needed, the entire consumers can be left blank
 | pullBatchSize       | pulls the fetch each time in pull mode              | 10                     |
 | pullInterval        | pull interval when there is no message in pull mode | 1000ms                 |
 | maxWaitTime         | pull timeout in pull mode          | 3000ms （According to the Nats limit, the actual minimum is 1ms） |
-| pullDelayTime         | pull time delay in pull mode           | 0ms （According to the Nats limit, the actual minimum is 1ms） |
+| pullDelayTime         | pull time delay in pull mode           | 0ms |
 
 ### Producer
 ```java
