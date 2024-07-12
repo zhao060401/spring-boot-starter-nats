@@ -31,7 +31,6 @@ If no modifications are needed, the entire consumers can be left blank
 | Field               | Explain                                             | Default                |
 |---------------------|-----------------------------------------------------|------------------------|
 | subject             | subject                                             |
-|
 | autoAck             | can auto ack                                        | true                   |
 | consumeThreadNumber | ThreadPoool corePoolSize                            | 20                     |
 | consumeThreadMax    | ThreadPoool maximumPoolSize                         | 64                     |
